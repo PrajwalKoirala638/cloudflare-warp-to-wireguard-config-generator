@@ -6,6 +6,8 @@
 #   2. Registers a new device with Cloudflare WARP
 #   3. Prints a ready-to-use WireGuard config to stdout
 #
+# Usage:
+#   ./warp-setup.sh > warp.conf
 #
 # To change behavior (DNS, QR code, account info, etc.), edit the
 # hardcoded values inside generate_warp_config below.
@@ -75,23 +77,70 @@ function install_required_tools() {
 
 function generate_warp_config() {
 	# this function takes no arguments; it prints a finished WireGuard config to stdout
-	echo "Generating WireGuard keypair..." >&2 # status message to the user, sent to stderr
 
-	local private_key                             # will hold this device's WireGuard private key
-	local public_key                              # will hold this device's WireGuard public key
-	private_key=$(wg genkey)                      # ask the wg tool to generate a fresh private key
-	public_key=$(echo "$private_key" | wg pubkey) # derive the matching public key from it
+	local state_dir=".config"                 # one folder for everything this script saves: the registration and every generated config
+	local state_file="$state_dir/device.json" # this file holds our private key + Cloudflare's response, so we don't have to re-register every time
 
-	echo "Registering with Cloudflare WARP..." >&2 # status message to the user
+	mkdir -p "$state_dir"  # make sure the state directory exists
+	chmod 700 "$state_dir" # keep the directory private, since it will contain a private key
 
-	local tos_date                                     # will hold the "terms of service accepted at" timestamp
-	tos_date=$(date -u +"%Y-%m-%dT%H:%M:%S.000+00:00") # current UTC time in the format Cloudflare expects
+	local private_key # will hold this device's WireGuard private key
+	local response    # will hold Cloudflare's registration response (either fresh or cached)
 
-	local request_body                                                                                                                               # will hold the JSON we send to Cloudflare to register this device
-	request_body="{\"key\":\"$public_key\",\"install_id\":\"\",\"warp_enabled\":true,\"tos\":\"$tos_date\",\"type\":\"Linux\",\"locale\":\"en_US\"}" # build the registration payload
+	if [[ -f "$state_file" ]]; then                                                                   # if we've registered before, reuse that registration
+		echo "Found an existing WARP registration - reusing it instead of registering a new device." >&2 # explain why we're skipping registration
+		private_key=$(jq -r '.private_key' "$state_file")                                                # load the private key we saved last time
+		response=$(jq -r '.response' "$state_file")                                                      # load the Cloudflare response we saved last time
+	else                                                                                              # no saved registration yet, so register a new one
+		echo "No existing WARP registration found - registering a new device..." >&2                     # explain what's about to happen
 
-	local response                                                                                                                       # will hold the raw JSON response from Cloudflare
-	response=$(curl -sS -f -X POST "https://api.cloudflareclient.com/v0a737/reg" -H "Content-Type: application/json" -d "$request_body") # POST the payload to Cloudflare's WARP endpoint and capture the response
+		local public_key                              # will hold this device's WireGuard public key
+		private_key=$(wg genkey)                      # ask the wg tool to generate a fresh private key
+		public_key=$(echo "$private_key" | wg pubkey) # derive the matching public key from it
+
+		local tos_date                                     # will hold the "terms of service accepted at" timestamp
+		tos_date=$(date -u +"%Y-%m-%dT%H:%M:%S.000+00:00") # current UTC time in the format Cloudflare expects
+
+		local request_body                                                                                                                               # will hold the JSON we send to Cloudflare to register this device
+		request_body="{\"key\":\"$public_key\",\"install_id\":\"\",\"warp_enabled\":true,\"tos\":\"$tos_date\",\"type\":\"Linux\",\"locale\":\"en_US\"}" # build the registration payload
+
+		local http_status            # will hold the HTTP status code curl got back
+		local response_body_file     # temp file to hold the response body separately from the status code
+		response_body_file=$(mktemp) # create a temp file to write the response body into
+
+		http_status=$(curl -sS -X POST "https://api.cloudflareclient.com/v0a737/reg" \
+			-H "Content-Type: application/json" \
+			-d "$request_body" \
+			-o "$response_body_file" \
+			-w "%{http_code}") || {                                                                      # -w prints just the status code to stdout; -o saves the body separately
+			echo "Error: could not reach Cloudflare's WARP registration endpoint (network problem)." >&2 # curl itself failed (DNS, connection, etc.)
+			rm -f "$response_body_file"                                                                  # clean up the temp file
+			exit 1                                                                                       # stop the script with a non-zero exit code
+		}
+
+		if [[ "$http_status" != "200" ]]; then                                                                                           # anything other than 200 means Cloudflare rejected the request
+			echo "Error: Cloudflare's WARP API returned HTTP $http_status." >&2                                                             # tell the user what status code came back
+			if [[ "$http_status" == "429" ]]; then                                                                                          # 429 specifically means "too many requests"
+				echo "This usually means too many device registrations have come from this network recently - wait a while and try again." >&2 # explain the likely cause
+			fi                                                                                                                              # end of the 429-specific hint
+			cat "$response_body_file" >&2                                                                                                   # show the raw response body to help debugging
+			rm -f "$response_body_file"                                                                                                     # clean up the temp file
+			exit 1                                                                                                                          # stop the script with a non-zero exit code
+		fi                                                                                                                               # end of the HTTP status check
+
+		response=$(cat "$response_body_file") # read the successful response body
+		rm -f "$response_body_file"           # clean up the temp file
+
+		if ! echo "$response" | jq -e . &>/dev/null; then                                  # make sure what we got back is actually valid JSON
+			echo "Error: Cloudflare's WARP API returned something that isn't valid JSON." >&2 # explain what went wrong
+			echo "$response" >&2                                                              # show the raw response to help debugging
+			exit 1                                                                            # stop the script with a non-zero exit code
+		fi                                                                                 # end of the JSON validity check
+
+		# Save this registration so future runs reuse it instead of registering a new device every time.
+		jq -n --arg pk "$private_key" --argjson resp "$response" '{private_key: $pk, response: $resp}' >"$state_file" # write both pieces to the state file as one JSON object
+		chmod 600 "$state_file"                                                                                       # keep the state file private, since it contains a private key
+	fi                                                                                                             # end of the "did we already have a registration" check
 
 	local server_public_key                                                               # will hold the Cloudflare WARP server's public key
 	local server_endpoint                                                                 # will hold the address:port of the WARP server to connect to
@@ -164,8 +213,8 @@ EOF
 	# WireGuard uses the filename (minus .conf) as the tunnel/interface name, and
 	# requires it to be 15 characters or fewer. "cf-warp-YYMMDD" is 14 characters,
 	# so this name will always import cleanly into the WireGuard app.
-	local config_file="cf-warp-${date_stamp}.conf" # save into the current directory as cf-warp-<date>.conf
-	echo "$config" >"$config_file"                 # write the config to that file
+	local config_file="$state_dir/cf-warp-${date_stamp}.conf" # save alongside device.json, in the same state folder
+	echo "$config" >"$config_file"                            # write the config to that file
 
 	echo "Saved config to $config_file" >&2 # let the user know where it went
 
