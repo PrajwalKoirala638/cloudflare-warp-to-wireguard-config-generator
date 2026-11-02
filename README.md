@@ -183,10 +183,22 @@ curl -s https://www.cloudflare.com/cdn-cgi/trace
 **Expected Output:**
 
 ```ini
-ip=104.28.xx.xx
+fl=28f846
+h=www.cloudflare.com
+ip=149.22.88.143
+ts=1793595433.000
+visit_scheme=https
+uag=curl/8.14.1
+colo=SEA
+sliver=050-tier1
+http=http/2
 loc=US
-colo=SFO
-warp=on
+tls=TLSv1.3
+sni=plaintext
+warp=off
+gateway=off
+rbi=off
+kex=X25519MLKEM768
 ```
 
 - **`warp=on`**: Confirms your traffic is actively passing through the Cloudflare WARP WireGuard tunnel! _(If it says `warp=off`, your traffic is not going through the tunnel)._
