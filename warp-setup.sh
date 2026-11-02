@@ -195,8 +195,9 @@ MTU = 1280
 
 [Peer]
 PublicKey = $server_public_key
-AllowedIPs = 0.0.0.0/0,::/0
 Endpoint = $server_endpoint
+AllowedIPs = 0.0.0.0/0,::/0
+PersistentKeepalive = 25
 EOF
 	) # End of the WireGuard configuration template (lines inside <<EOF to EOF cannot have bash comments, or they would break the WireGuard file)
 
