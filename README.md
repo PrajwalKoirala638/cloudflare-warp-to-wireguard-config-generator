@@ -1,126 +1,262 @@
-# cloudflare-warp-to-wireguard-config-generator
+# ☁️🔒 cloudflare-warp-to-wireguard-config-generator
 
-Generate a free WireGuard config for [Cloudflare WARP](https://developers.cloudflare.com/warp-client/) — then connect using the **standard WireGuard app** instead of Cloudflare's own WARP app, and route all of your device's traffic through Cloudflare's network.
+![Shell Script](https://img.shields.io/badge/Shell_Script-121011?style=for-the-badge&logo=gnu-bash&logoColor=white)
+![WireGuard](https://img.shields.io/badge/WireGuard-88171A?style=for-the-badge&logo=wireguard&logoColor=white)
+![Cloudflare](https://img.shields.io/badge/Cloudflare_WARP-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-No account, no email, no credit card, no subscription. Cloudflare's free WARP tier costs nothing, so this whole setup is 100% free — which makes it a solid option for encrypting your traffic on hotel wifi, airport wifi, coffee shops, or any other network you don't fully trust while traveling.
+Generate a free, native **WireGuard configuration** for [Cloudflare WARP](https://developers.cloudflare.com/warp-client/) in seconds — allowing you to connect using the **standard, open-source WireGuard client** instead of Cloudflare's proprietary application, and securely route all your traffic through Cloudflare's global edge network (330+ cities across 120+ countries).
 
----
-
-## Why use the WireGuard app instead of the Cloudflare WARP app?
-
-Cloudflare WARP is actually just a hosted WireGuard endpoint under the hood — their official app is a WireGuard client with a friendlier UI wrapped around it. This script skips the wrapper: it does the same one-time registration step the WARP app does behind the scenes, then hands you a plain WireGuard config so you can connect with the regular [WireGuard app](https://www.wireguard.com/install/) instead.
-
-A few reasons people prefer that:
-
-- **One app for everything.** If you already use WireGuard for a home server, a work VPN, or anything else, you can manage your WARP tunnel from the exact same app instead of installing a second, separate one just for Cloudflare.
-- **Full manual control over the config.** You can see and edit the raw `[Interface]`/`[Peer]` config yourself — the endpoint, the DNS servers, the MTU, the allowed IP ranges. The official WARP app hides all of this from you.
-- **Portability.** A standard `.conf` file works on routers, NAS boxes, headless Linux servers, and any other device that speaks WireGuard — most of which can't run Cloudflare's own app at all.
-- **Lighter weight.** The WireGuard apps are minimal, open-source, and don't phone home with telemetry the way a vendor's own client might.
-- **No lock-in.** The generated config is just WireGuard. If you ever want to point the same app at a different WireGuard server instead, you already know how — it's the same workflow.
-
-The trade-off: you lose the WARP app's extra features — WARP+ (their paid, faster tier), Cloudflare's DNS-based content filtering options (WARP for Families), and automatic reconnection handling. If you just want "route my traffic through Cloudflare for free," this script gets you there with less software installed.
+🚫 **No account. No email. No credit card. No subscription. No bandwidth limits.**  
+Cloudflare's consumer WARP tier is 100% free. That makes this setup an ideal, zero-cost solution for encrypting your traffic on untrusted networks like hotel Wi-Fi 🏨, airports ✈️, coffee shops ☕, or restrictive ISPs 🌐.
 
 ---
 
-## What this actually is
+## 📑 Table of Contents
 
-This is a single shell script, `warp-setup.sh`, that:
-
-1. **Installs what it needs.** Checks for `curl`, `jq`, `wg` (WireGuard's command-line tool), and `qrencode`, and installs anything missing using your distro's package manager.
-2. **Generates a keypair.** Creates a fresh WireGuard private/public key pair locally, on your machine — your private key never leaves your computer.
-3. **Registers with Cloudflare.** Sends your public key to Cloudflare's WARP registration endpoint, the same API call the official WARP app makes the first time you open it. This gets you a free device slot, an assigned tunnel IP address, and the address of a nearby WARP server.
-4. **Builds the config.** Assembles all of that into a standard WireGuard `[Interface]`/`[Peer]` config file.
-5. **Hands it to you two ways.** Saves the config to a file, and also prints it as a QR code right in your terminal so you can scan it straight into your phone.
-
-You end up with an ordinary `.conf` file — this script doesn't run a VPN itself, doesn't stay running in the background, and doesn't install any daemon. It just generates the config and exits. The actual tunnel is created and managed entirely by whichever WireGuard app you import the file into.
-
----
-
-## Requirements
-
-- A Linux machine to **run the script on** (Ubuntu/Debian, Fedora/RHEL/CentOS, Arch, or Alpine) with `bash`
-- Root access (or `sudo`) — only needed if the script has to install missing tools; if `curl`, `jq`, `wg`, and `qrencode` are already installed, it won't touch anything else on your system
-- The [WireGuard app](https://www.wireguard.com/install/) on whatever device you actually want to **use** the VPN on — this can be a completely different device than the one you ran the script on (e.g. run the script on a Linux laptop, then scan the QR code with your phone)
+- [🤔 Why Native WireGuard vs. the Official WARP App?](#-why-native-wireguard-vs-the-official-warp-app)
+- [⚙️ Under the Hood: How It Works](#️-under-the-hood-how-it-works)
+- [📄 Anatomy of the Generated Config](#-anatomy-of-the-generated-config)
+- [📋 Requirements](#-requirements)
+- [🚀 Quick Start & Usage](#-quick-start--usage)
+- [📲 Importing into WireGuard](#-importing-into-wireguard)
+- [✅ Verifying Your Connection](#-verifying-your-connection)
+- [🔧 Advanced Customization & Tweaks](#-advanced-customization--tweaks)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [⚠️ Privacy & Security Notes](#️-privacy--security-notes)
+- [📜 License](#-license)
 
 ---
 
-## Usage
+## 🤔 Why Native WireGuard vs. the Official WARP App?
+
+Under the hood, Cloudflare WARP is built on the WireGuard protocol (specifically Cloudflare's Rust implementation, `BoringTun`). Their official desktop and mobile apps are essentially WireGuard clients wrapped in a proprietary UI and background daemon.
+
+This script skips the wrapper: it executes the exact same one-time registration API call the official app makes behind the scenes, then extracts your credentials into a standard `.conf` file for the [official WireGuard client](https://www.wireguard.com/install/).
+
+### 📊 Feature Comparison
+
+| Feature / Aspect          | 🐉 Native WireGuard (`.conf`)                                 | ☁️ Official Cloudflare WARP App                   |
+| :------------------------ | :------------------------------------------------------------ | :------------------------------------------------ |
+| **Client Software**       | Official open-source WireGuard app                            | Proprietary Cloudflare client + background daemon |
+| **System Resource Usage** | 🪶 Ultra-lightweight (Kernel-space on Linux)                  | 🐘 Heavy background service (`warp-svc`)          |
+| **Telemetry & Analytics** | 🔒 Zero client telemetry                                      | 📊 Sends client diagnostic/crash data             |
+| **Router / NAS Support**  | ✅ Yes (OpenWrt, pfSense, OPNsense, GL.iNet, Synology)        | ❌ No (Desktop & Mobile OS only)                  |
+| **Config Customization**  | 🎛️ Full control (Custom DNS, MTU, Split-Tunneling, Endpoints) | 🔒 Locked down / Hidden behind GUI                |
+| **Multi-VPN Management**  | 🧰 Manage alongside all your other WireGuard tunnels          | 🧩 Requires a separate dedicated app              |
+| **Cost & Bandwidth**      | 💸 100% Free & Unlimited                                      | 💸 100% Free & Unlimited (Base tier)              |
+| **WARP+ (Argo Routing)**  | ❌ Standard WARP routing only                                 | ✅ Supported (Paid subscription)                  |
+
+---
+
+## ⚙️ Under the Hood: How It Works
+
+This repository contains a single standalone Bash script, `warp-setup.sh`, that runs through 5 automated steps:
+
+1. 📦 **Dependency Check:** Verifies that `curl`, `jq`, `wg` (WireGuard CLI tools), and `qrencode` are installed. If anything is missing, it detects your Linux distribution and installs them via your native package manager.
+2. 🔑 **Local Keypair Generation:** Runs `wg genkey` and `wg pubkey` to create a fresh Curve25519 private/public keypair locally in memory — **your private key never leaves your machine**.
+3. 🌐 **Cloudflare API Registration:** Sends an HTTP `POST` request containing _only_ your public key and a standard timestamp to `https://api.cloudflareclient.com/v0a2158/reg`. Cloudflare responds with a JSON payload containing your newly provisioned Device ID, internal IPv4/IPv6 tunnel addresses, and peer endpoint details.
+4. 📝 **Config Assembly:** Parses the JSON payload with `jq` and injects your local private key and Cloudflare's peer details into a clean, standards-compliant WireGuard `.conf` file.
+5. 📱 **Dual Output:** Saves the `.conf` file to your current directory and pipes it through `qrencode -t ansiutf8` to render a scannable QR code directly inside your terminal window.
+
+> 💡 **Zero Footprint:** This script does **not** run a VPN, stay open in the background, modify your network interfaces, or install any background services. It strictly generates your `.conf` file and exits cleanly.
+
+---
+
+## 📄 Anatomy of the Generated Config
+
+Each run creates a timestamped configuration file in your current directory:
+
+```text
+cf-warp-261102.conf
+```
+
+> 📏 **Why the short filename?** Linux network interfaces (`wg-quick`) use the filename (minus `.conf`) as the interface name, which the Linux kernel strictly limits to **15 characters (`IFNAMSIZ`)**. `cf-warp-YYMMDD` is exactly 14 characters, ensuring zero import errors across Linux, macOS, Windows, iOS, and Android.
+
+### Example Output Breakdown
+
+```ini
+[Interface]
+# Your locally generated Curve25519 private key (Keep this secret!)
+PrivateKey = <YOUR_LOCAL_PRIVATE_KEY>
+
+# Your unique Cloudflare-assigned internal WARP IPs (IPv4 /32 and IPv6 /128)
+Address = 172.16.0.2/32, 2606:4700:110:8a3f:xxxx:xxxx:xxxx:xxxx/128
+
+# Cloudflare's ultra-fast 1.1.1.1 DNS resolvers (IPv4 + IPv6)
+DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
+
+# Optimal MTU for WARP encapsulation overhead
+MTU = 1280
+
+[Peer]
+# Cloudflare WARP's universal public key
+PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+
+# Route ALL IPv4 and IPv6 traffic through the tunnel
+AllowedIPs = 0.0.0.0/0, ::/0
+
+# Cloudflare's Anycast WireGuard Endpoint (Automatically routes to your nearest PoP)
+Endpoint = engage.cloudflareclient.com:2408
+```
+
+---
+
+## 📋 Requirements
+
+| Component                   | Details                                                                                                                                                                     |
+| :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🐧 **OS to run the script** | Any Linux environment with `bash` (Ubuntu, Debian, Fedora, RHEL, CentOS, Rocky, Alma, Arch, Manjaro, Alpine) — works great on bare metal, VMs, Docker, or **Windows WSL2**. |
+| 🛠️ **Dependencies**         | `curl`, `jq`, `wireguard-tools` (`wg`), `qrencode` _(Auto-installed by the script if missing)_.                                                                             |
+| 🛡️ **Privileges**           | Standard user if dependencies are already installed; `sudo` / `root` only if packages need to be installed.                                                                 |
+| 📲 **Client Device**        | Any device running the [WireGuard App](https://www.wireguard.com/install/) (iOS, Android, Windows, macOS, Linux, or a compatible Router/NAS).                               |
+
+---
+
+## 🚀 Quick Start & Usage
+
+1. **Make the script executable and run it:**
 
 ```bash
 chmod +x warp-setup.sh
-bash warp-setup.sh
+./warp-setup.sh
 ```
 
-That's it — no flags, no environment variables to configure. Run it and it does everything on its own.
-
-If it needs to install tools and you're not already root, it'll stop and tell you to re-run with `sudo` instead of guessing:
+2. **If you are missing dependencies** and aren't logged in as `root`, run it with `sudo` so it can install them automatically:
 
 ```bash
 sudo bash warp-setup.sh
 ```
 
+### 🖥️ What You'll See in Terminal:
+
+- ✅ Step-by-step progress checks
+- 🪪 Your WARP account metadata (Account ID, Device ID, Account Type, WireGuard Public Key)
+- 🔳 An instant **ANSI UTF-8 QR code** rendered directly in your terminal
+- 📄 The complete raw `.conf` file text
+
 ---
 
-## What you get
+## 📲 Importing into WireGuard
 
-Each run creates a config file in your current directory named like:
+### 📱 Mobile (iOS & Android)
 
+1. Install the official **[WireGuard app](https://www.wireguard.com/install/)** from the App Store or Google Play.
+2. Open the app, tap the **`+`** button, and select **Create from QR code**.
+3. Point your phone's camera at the QR code printed in your terminal.
+4. Name the tunnel (e.g., `Cloudflare-WARP`) and flip the toggle to connect.
+
+### 💻 Desktop (Windows, macOS, Linux GUI)
+
+1. Install the official **[WireGuard client](https://www.wireguard.com/install/)**.
+2. Click **Import tunnel(s) from file** (or press `Ctrl+O` / `Cmd+O`).
+3. Select the generated `cf-warp-YYMMDD.conf` file and click **Activate**.
+
+### 🐧 Linux CLI (`wg-quick`)
+
+To run the tunnel directly from a Linux terminal or headless server:
+
+```bash
+# Copy the config to /etc/wireguard/
+sudo cp cf-warp-261102.conf /etc/wireguard/
+
+# Bring the tunnel up
+sudo wg-quick up cf-warp-261102
+
+# Check tunnel handshake & transfer status
+sudo wg show
+
+# Bring the tunnel down when done
+sudo wg-quick down cf-warp-261102
 ```
-cf-warp-260831.conf
+
+---
+
+## ✅ Verifying Your Connection
+
+Once your tunnel is active, you can verify that your traffic is encrypted and routing through Cloudflare's WARP network using Cloudflare's built-in trace endpoint:
+
+```bash
+curl -s [https://www.cloudflare.com/cdn-cgi/trace](https://www.cloudflare.com/cdn-cgi/trace) | grep -E "warp=|ip=|loc=|colo="
 ```
 
-That's `cf-warp-YYMMDD` — the date you ran the script, in `YYMMDD` format. The short name is intentional: WireGuard uses the filename (minus `.conf`) as the tunnel's interface name, and that name has to be 15 characters or fewer to import without errors. `cf-warp-YYMMDD` comes in at 14.
+**Expected Output:**
 
-While it runs, you'll also see:
+```ini
+ip=104.28.xx.xx
+loc=US
+colo=SFO
+warp=on
+```
 
-- Status messages as it works through each step
-- A summary of your new WARP account (account ID, device ID, plan type, expiry)
-- A scannable QR code of the finished config, printed directly in your terminal
-- The full config text itself
+- **`warp=on`**: Confirms your traffic is actively passing through the Cloudflare WARP WireGuard tunnel! _(If it says `warp=off`, your traffic is not going through the tunnel)._
+- **`colo=XXX`**: Shows the 3-letter IATA airport code of the nearest Cloudflare Data Center (PoP) handling your connection.
 
----
-
-## Importing into WireGuard
-
-**On your phone (iOS / Android):**
-
-1. Install the official [WireGuard app](https://www.wireguard.com/install/) from your app store.
-2. Open the app and tap **+** → **Scan from QR code**.
-3. Point your camera at the QR code the script printed in your terminal.
-4. Give the tunnel a name if asked, then tap the toggle to connect.
-
-**On a computer (Windows / macOS / Linux) or a router/NAS:**
-
-1. Install the official [WireGuard app](https://www.wireguard.com/install/) (or, on a router/NAS, whatever WireGuard support it has built in).
-2. Import the `cf-warp-YYMMDD.conf` file the script saved — most WireGuard apps have an "Import tunnel(s) from file" option.
-3. Activate the tunnel.
-
-Once it's connected, **all** of your traffic — IPv4 and IPv6 — routes through Cloudflare's WARP network before it reaches the open internet.
+_(On a phone or browser, simply visit **[https://1.1.1.1/help](https://1.1.1.1/help)** and check that **"Connected to 1.1.1.1"** and **"WARP"** says **Yes**)._
 
 ---
 
-## Is this really free?
+## 🔧 Advanced Customization & Tweaks
 
-Yes. Cloudflare's free WARP tier doesn't require a paid WARP+ subscription for what this script uses — you're registering as an ordinary free device, exactly like the official WARP app does the first time you open it. There's no cost to generate or use this config, and no usage limits beyond what Cloudflare applies to free WARP accounts in general.
+Because you have the raw `.conf` file, you can customize it before or after importing to suit different networks and use cases:
+
+### 1. 🛡️ Block Malware or Adult Content via DNS (1.1.1.1 for Families)
+
+Replace the `DNS = ...` line in your `.conf` file to get automatic network-level filtering without installing extra software:
+
+- **Block Malware & Phishing:**
+  ```ini
+  DNS = 1.1.1.2, 1.0.0.2, 2606:4700:4700::1112, 2606:4700:4700::1002
+  ```
+- **Block Malware + Adult Content:**
+  ```ini
+  DNS = 1.1.1.3, 1.0.0.3, 2606:4700:4700::1113, 2606:4700:4700::1003
+  ```
+
+### 2. 🧱 Bypass Strict Firewalls (Alternative Ports & Endpoints)
+
+If a restrictive hotel, school, or corporate firewall blocks UDP port `2408` or blocks DNS resolution for `engage.cloudflareclient.com`, you can edit the `Endpoint =` line in the `[Peer]` section to use direct Anycast IPs and alternative ports:
+
+- **Direct IPv4 Endpoints:** `162.159.192.1` or `162.159.193.1`
+- **Direct IPv6 Endpoints:** `[2606:4700:d0::a29f:c001]` or `[2606:4700:d0::a29f:c101]`
+- **Supported UDP Ports:** `2408` (default), `500` (IKEv2 standard port — rarely blocked!), `1701`, or `4500`
+
+_Example firewall-friendly endpoint:_
+
+```ini
+Endpoint = 162.159.192.1:500
+```
+
+### 3. 💓 Fix Dropped Connections Behind NAT (`PersistentKeepalive`)
+
+If you are using this config on a router or a device that stays connected 24/7 behind a strict NAT firewall, add this line under the `[Peer]` section to keep the UDP state table alive:
+
+```ini
+PersistentKeepalive = 25
+```
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
-- **"command not found" errors when running the script.** Something in the install step didn't work — try running with `sudo` so it can install the missing tool, or install `curl`, `jq`, `wireguard-tools`, and `qrencode` manually with your distro's package manager.
-- **Tunnel imports but nothing connects.** Some networks (especially hotel or airport captive-portal wifi) block outbound WireGuard traffic. Try a different network, or check whether the network requires you to log in through a browser first before any VPN traffic will pass.
-- **"Unrecognized distro" message.** The script only auto-installs packages on Ubuntu/Debian, Fedora/RHEL-family, Arch, and Alpine. On anything else, install `curl`, `jq`, `wireguard-tools`, and `qrencode` yourself, then run the script again.
-
----
-
-## A couple of honest notes
-
-- **Each run registers a new device.** Every time you run the script, it creates a brand-new WARP registration and a new config file. Old configs keep working, but running it repeatedly will leave you with several registered devices over time on Cloudflare's side.
-- **This isn't anonymity.** It hides your traffic from your immediate network (hotel wifi, an untrusted café, your ISP), which is genuinely useful — but Cloudflare itself can still see your traffic passing through its network, the same as with any VPN provider. Think of it as "don't trust this wifi" protection, not an anonymity tool.
-- **Guard the config file.** It contains your WireGuard private key, which is effectively the password to your tunnel. Treat it like a credential — don't share it or commit it to a public repo.
+| Issue / Symptom                                 | Cause                                                                 | Solution                                                                                                                                                                                       |
+| :---------------------------------------------- | :-------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ❌ **`command not found` during run**           | Script lacked permissions to install missing tools.                   | Re-run with `sudo bash warp-setup.sh`, or install `curl jq wireguard-tools qrencode` manually.                                                                                                 |
+| 🌐 **Connected, but pages won't load**          | Captive portal or blocked UDP port `2408`.                            | 1. Disconnect VPN, open a browser, and complete the hotel/airport Wi-Fi login page.<br>2. Change endpoint port to `:500` or `:4500` (see [Advanced Tweaks](#-advanced-customization--tweaks)). |
+| 🐢 **Slow speeds or packet fragmentation**      | Network path has lower MTU overhead (e.g., PPPoE or mobile hotspots). | Lower `MTU = 1280` in the `[Interface]` section to `MTU = 1240` or `MTU = 1200`.                                                                                                               |
+| 🐧 **`resolvconf: command not found` on Linux** | Missing DNS handler for `wg-quick` on Debian/Ubuntu/Arch.             | Install `openresolv` or `systemd-resolved` (e.g., `sudo apt install openresolv`).                                                                                                              |
+| ❓ **`Unrecognized distro` error**              | Running on NixOS, openSUSE, Gentoo, or macOS.                         | Manually install `curl`, `jq`, `wireguard-tools`, and `qrencode`, then run `./warp-setup.sh` as a normal user.                                                                                 |
 
 ---
 
-## License
+## ⚠️ Privacy & Security Notes
 
-MIT — do whatever you want with this, no warranty.
+- 🔄 **One Config Per Device (No Concurrent Reuse):** Every time you run `warp-setup.sh`, it generates a brand-new keypair and registers a distinct device slot with Cloudflare. Do **not** run the same `.conf` file on two devices simultaneously (e.g., your laptop and phone at the same time), or their WireGuard handshakes will collide and drop packets. Simply run the script again to generate a second `.conf` for your second device!
+- 🕵️ **Security vs. Anonymity:** WARP encrypts 100% of your traffic between your device and Cloudflare's nearest edge server. This completely protects you from local packet sniffing on public Wi-Fi, ISP snooping, and DNS hijacking. However, **WARP is not an anonymity or geo-spoofing tool** — websites will see a Cloudflare egress IP localized to your current region, and Cloudflare processes the traffic according to their [Consumer Privacy Policy](https://www.cloudflare.com/application/privacypolicy/).
+- 🔐 **Guard Your `.conf` File:** Your generated `.conf` file contains your unencrypted WireGuard `PrivateKey`. Treat it like a password — set restrictive file permissions (`chmod 600 cf-warp-*.conf`) and **never** commit it to a public Git repository!
+
+---
+
+## 📜 License
+
+Distributed under the **MIT License**. Do whatever you want with this script — modify, share, or integrate it into your own dotfiles. Provided _as-is_ with no warranty.
