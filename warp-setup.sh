@@ -7,7 +7,7 @@
 #   3. Builds a ready-to-use WireGuard VPN configuration and prints it to the screen
 #
 # How to use it:
-#   ./warp-setup.sh > warp.conf
+#   bash warp-setup.sh
 #
 # How to customize it:
 #   To change settings like DNS servers or file names, edit the values inside generate_warp_config below.
@@ -179,17 +179,10 @@ function generate_warp_config() { # Define the function that talks to Cloudflare
 
 	echo "Building WireGuard config..." >&2 # Let the user know we are assembling the final configuration file
 
-<<<<<<< HEAD
 	local interface_address="$device_ipv4/32"                    # Start building the VPN address setting using your IPv4 address (/32 means a single device address)
 	if [[ -n "$device_ipv6" && "$device_ipv6" != "null" ]]; then # Check if Cloudflare also gave us a valid IPv6 address
 		interface_address="$interface_address,$device_ipv6/128"     # Add the IPv6 address after a comma (/128 means a single IPv6 device address)
 	fi                                                           # End of the IPv6 address check
-=======
-	local interface_address="$device_ipv4/32"                    # start the Address line with just the IPv4 address
-	if [[ -n "$device_ipv6" && "$device_ipv6" != "null" ]]; then # if Cloudflare also gave us an IPv6 address
-		interface_address="$interface_address,$device_ipv6/128"    # append it to the Address line
-	fi                                                           # end of the IPv6 check
->>>>>>> 3ac6de54e8f00973cd5b9a14a6ff5257a43275d3
 
 	local config # Create a variable to hold the complete text of the WireGuard configuration file
 	config=$( # Start capturing the template text below into our config variable
@@ -222,7 +215,7 @@ EOF
 
 	echo "Saved config to $config_file" >&2 # Tell the user where the configuration file was saved on their computer
 
-	echo "$config" # Finally, output the pure configuration to standard output (stdout) so "./warp-setup.sh > warp.conf" works cleanly
+	echo "$config" # Finally, output the pure configuration to standard output (stdout) so "bash warp-setup.sh" works cleanly
 }               # End of the generate_warp_config function
 
 # ==============================================================================
