@@ -177,7 +177,7 @@ sudo wg-quick down cf-warp-261102
 Once your tunnel is active, you can verify that your traffic is encrypted and routing through Cloudflare's WARP network using Cloudflare's built-in trace endpoint:
 
 ```bash
-curl -s [https://www.cloudflare.com/cdn-cgi/trace](https://www.cloudflare.com/cdn-cgi/trace) | grep -E "warp=|ip=|loc=|colo="
+curl -s https://www.cloudflare.com/cdn-cgi/trace
 ```
 
 **Expected Output:**
