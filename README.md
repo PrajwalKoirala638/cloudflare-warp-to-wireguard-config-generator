@@ -119,7 +119,7 @@ Endpoint = engage.cloudflareclient.com:2408
 
 ```bash
 chmod +x warp-setup.sh
-./warp-setup.sh
+bash warp-setup.sh
 ```
 
 2. **If you are missing dependencies** and aren't logged in as `root`, run it with `sudo` so it can install them automatically:
@@ -245,7 +245,7 @@ PersistentKeepalive = 25
 | 🌐 **Connected, but pages won't load**          | Captive portal or blocked UDP port `2408`.                            | 1. Disconnect VPN, open a browser, and complete the hotel/airport Wi-Fi login page.<br>2. Change endpoint port to `:500` or `:4500` (see [Advanced Tweaks](#-advanced-customization--tweaks)). |
 | 🐢 **Slow speeds or packet fragmentation**      | Network path has lower MTU overhead (e.g., PPPoE or mobile hotspots). | Lower `MTU = 1280` in the `[Interface]` section to `MTU = 1240` or `MTU = 1200`.                                                                                                               |
 | 🐧 **`resolvconf: command not found` on Linux** | Missing DNS handler for `wg-quick` on Debian/Ubuntu/Arch.             | Install `openresolv` or `systemd-resolved` (e.g., `sudo apt install openresolv`).                                                                                                              |
-| ❓ **`Unrecognized distro` error**              | Running on NixOS, openSUSE, Gentoo, or macOS.                         | Manually install `curl`, `jq`, `wireguard-tools`, and `qrencode`, then run `./warp-setup.sh` as a normal user.                                                                                 |
+| ❓ **`Unrecognized distro` error**              | Running on NixOS, openSUSE, Gentoo, or macOS.                         | Manually install `curl`, `jq`, `wireguard-tools`, and `qrencode`, then run `bash warp-setup.sh` as a normal user.                                                                                 |
 
 ---
 
