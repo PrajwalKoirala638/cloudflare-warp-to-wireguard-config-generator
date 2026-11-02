@@ -81,10 +81,10 @@ cf-warp-261102.conf
 PrivateKey = <YOUR_LOCAL_PRIVATE_KEY>
 
 # Your unique Cloudflare-assigned internal WARP IPs (IPv4 /32 and IPv6 /128)
-Address = 172.16.0.2/32, 2606:4700:110:8a3f:xxxx:xxxx:xxxx:xxxx/128
+Address = 172.16.0.2/32,2606:4700:110:8a3f:xxxx:xxxx:xxxx:xxxx/128
 
 # Cloudflare's ultra-fast 1.1.1.1 DNS resolvers (IPv4 + IPv6)
-DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
+DNS = 1.1.1.1,1.0.0.1,2606:4700:4700::1111,2606:4700:4700::1001
 
 # Optimal MTU for WARP encapsulation overhead
 MTU = 1280
@@ -94,7 +94,7 @@ MTU = 1280
 PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
 
 # Route ALL IPv4 and IPv6 traffic through the tunnel
-AllowedIPs = 0.0.0.0/0, ::/0
+AllowedIPs = 0.0.0.0/0,::/0
 
 # Cloudflare's Anycast WireGuard Endpoint (Automatically routes to your nearest PoP)
 Endpoint = engage.cloudflareclient.com:2408
@@ -218,11 +218,11 @@ Replace the `DNS = ...` line in your `.conf` file to get automatic network-level
 
 - **Block Malware & Phishing:**
   ```ini
-  DNS = 1.1.1.2, 1.0.0.2, 2606:4700:4700::1112, 2606:4700:4700::1002
+  DNS = 1.1.1.2,1.0.0.2,2606:4700:4700::1112,2606:4700:4700::1002
   ```
 - **Block Malware + Adult Content:**
   ```ini
-  DNS = 1.1.1.3, 1.0.0.3, 2606:4700:4700::1113, 2606:4700:4700::1003
+  DNS = 1.1.1.3,1.0.0.3,2606:4700:4700::1113,2606:4700:4700::1003
   ```
 
 ### 2. 🧱 Bypass Strict Firewalls (Alternative Ports & Endpoints)
@@ -236,7 +236,7 @@ If a restrictive hotel, school, or corporate firewall blocks UDP port `2408` or 
 _Example firewall-friendly endpoint:_
 
 ```ini
-Endpoint = 162.159.192.1:500
+Endpoint = 162.159.192.1:51820
 ```
 
 ### 3. 💓 Fix Dropped Connections Behind NAT (`PersistentKeepalive`)
