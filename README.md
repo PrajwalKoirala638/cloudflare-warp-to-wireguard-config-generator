@@ -236,7 +236,7 @@ If a restrictive hotel, school, or corporate firewall blocks UDP port `2408` or 
 _Example firewall-friendly endpoint:_
 
 ```ini
-Endpoint = 162.159.192.1:51820
+Endpoint = 162.159.192.1:500
 ```
 
 ### 3. 💓 Fix Dropped Connections Behind NAT (`PersistentKeepalive`)
