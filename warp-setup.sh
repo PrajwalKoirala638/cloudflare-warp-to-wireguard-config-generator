@@ -192,12 +192,12 @@ function generate_warp_config() {
 [Interface]
 PrivateKey = $private_key
 Address = $interface_address
-DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
+DNS = 1.1.1.1,1.0.0.1,2606:4700:4700::1111,2606:4700:4700::1001
 MTU = 1280
 
 [Peer]
 PublicKey = $server_public_key
-AllowedIPs = 0.0.0.0/0, ::/0
+AllowedIPs = 0.0.0.0/0,::/0
 Endpoint = $server_endpoint
 EOF
 	) # end of the here-document that builds $config
