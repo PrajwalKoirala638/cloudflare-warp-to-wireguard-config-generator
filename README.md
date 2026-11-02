@@ -48,7 +48,7 @@ You end up with an ordinary `.conf` file — this script doesn't run a VPN itsel
 
 ```bash
 chmod +x warp-setup.sh
-./warp-setup.sh
+bash warp-setup.sh
 ```
 
 That's it — no flags, no environment variables to configure. Run it and it does everything on its own.
@@ -56,7 +56,7 @@ That's it — no flags, no environment variables to configure. Run it and it doe
 If it needs to install tools and you're not already root, it'll stop and tell you to re-run with `sudo` instead of guessing:
 
 ```bash
-sudo ./warp-setup.sh
+sudo bash warp-setup.sh
 ```
 
 ---
