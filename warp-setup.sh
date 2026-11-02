@@ -183,7 +183,7 @@ function generate_warp_config() {
 
 	local interface_address="$device_ipv4/32"                    # start the Address line with just the IPv4 address
 	if [[ -n "$device_ipv6" && "$device_ipv6" != "null" ]]; then # if Cloudflare also gave us an IPv6 address
-		interface_address="$interface_address, $device_ipv6/128"    # append it to the Address line
+		interface_address="$interface_address,$device_ipv6/128"    # append it to the Address line
 	fi                                                           # end of the IPv6 check
 
 	local config # will hold the finished [Interface]/[Peer] config text
