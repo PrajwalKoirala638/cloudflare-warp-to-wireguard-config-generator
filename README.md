@@ -1,9 +1,9 @@
 # ☁️🔒 cloudflare-warp-to-wireguard-config-generator
 
-![Shell Script](https://img.shields.io/badge/Shell_Script-121011?style=for-the-badge&logo=gnu-bash&logoColor=white)
-![WireGuard](https://img.shields.io/badge/WireGuard-88171A?style=for-the-badge&logo=wireguard&logoColor=white)
-![Cloudflare](https://img.shields.io/badge/Cloudflare_WARP-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+[![Shell Script](https://img.shields.io/badge/Shell_Script-121011?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://en.wikipedia.org/wiki/Shell_script)
+[![WireGuard](https://img.shields.io/badge/WireGuard-88171A?style=for-the-badge&logo=wireguard&logoColor=white)](https://www.wireguard.com/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare_WARP-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://one.one.one.one/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](https://github.com/PrajwalKoirala638/cloudflare-warp-to-wireguard-config-generator/blob/main/LICENSE)
 
 Generate a free, native **WireGuard configuration** for [Cloudflare WARP](https://developers.cloudflare.com/warp-client/) in seconds — allowing you to connect using the **standard, open-source WireGuard client** instead of Cloudflare's proprietary application, and securely route all your traffic through Cloudflare's global edge network (330+ cities across 120+ countries).
 
